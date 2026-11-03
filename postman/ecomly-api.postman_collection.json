@@ -1,0 +1,220 @@
+{
+  "info": {
+    "_postman_id": "06472f5a-d4a2-4c5a-bb1c-ea01a9ca1001",
+    "name": "Ecomly Local API",
+    "description": "Local API checks for health, registration, authentication, cart, and product routes. Seed the local database before running the seeded-user, protected, and product requests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/health"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('health responds 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('health status is ok', function () { pm.expect(pm.response.json().status).to.eql('ok'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Register user",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const email = 'postman-' + Date.now() + '@example.test';",
+              "pm.environment.set('registrationEmail', email);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('registration responds 201', function () { pm.response.to.have.status(201); });",
+              "const body = pm.response.json();",
+              "pm.test('registration returns the created user without password data', function () { pm.expect(body.user.email).to.eql(pm.environment.get('registrationEmail')); pm.expect(body.user.fullName).to.eql('Postman New User'); pm.expect(body.user.passwordHash).to.be.undefined; });",
+              "pm.environment.set('registrationUserId', body.user._id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fullName\": \"Postman New User\",\n  \"email\": \"{{registrationEmail}}\",\n  \"password\": \"EcomlyNewUser123!\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/api/v1/auth/register"
+      }
+    },
+    {
+      "name": "Reject duplicate registration email",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fullName\": \"Postman New User\",\n  \"email\": \"{{registrationEmail}}\",\n  \"password\": \"EcomlyNewUser123!\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/api/v1/auth/register"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('duplicate registration responds 409', function () { pm.response.to.have.status(409); });",
+              "pm.test('duplicate registration has stable error code', function () { pm.expect(pm.response.json().error.code).to.eql('EMAIL_ALREADY_REGISTERED'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Login (local seeded user)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"{{testPassword}}\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/api/v1/auth/login"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('login responds 200', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test('login returns tokens and user', function () { pm.expect(body.accessToken).to.be.a('string'); pm.expect(body.refreshToken).to.be.a('string'); pm.expect(body.user.email).to.eql(pm.environment.get('testEmail')); });",
+              "pm.environment.set('accessToken', body.accessToken);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get current cart",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+        "url": "{{baseUrl}}/api/v1/cart"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('cart responds 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('cart contains items array', function () { pm.expect(pm.response.json().data.items).to.be.an('array'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get seeded product",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/products/{{productId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('product responds 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('product data matches seeded record', function () { pm.expect(pm.response.json().data.title).to.eql('Postman Sample T-Shirt'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject malformed product id",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/products/not-an-object-id"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('invalid id responds 400', function () { pm.response.to.have.status(400); });",
+              "pm.test('invalid id has stable error code', function () { pm.expect(pm.response.json().error.code).to.eql('INVALID_PRODUCT_ID'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Logout",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+        "url": "{{baseUrl}}/api/v1/auth/logout"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('logout responds 204', function () { pm.response.to.have.status(204); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cart rejects logged-out token",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+        "url": "{{baseUrl}}/api/v1/cart"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('revoked token responds 401', function () { pm.response.to.have.status(401); });"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://127.0.0.1:3000" }
+  ]
+}

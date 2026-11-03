@@ -5,7 +5,10 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "node --watch src/server.js"
+    "dev": "node --watch src/server.js",
+    "db:start:local": "sh scripts/start-local-mongodb.sh",
+    "db:stop:local": "sh scripts/stop-local-mongodb.sh",
+    "seed:dev": "node src/scripts/seedDevelopment.js"
   },
   "keywords": [],
   "author": "",
