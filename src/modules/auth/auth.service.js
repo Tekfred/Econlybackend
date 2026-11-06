@@ -12,21 +12,34 @@ async function verifyPassword(password, passwordHash) {
   return bcrypt.compare(password, passwordHash);
 }
 
-async function register({ fullName, email, password }) {
+function toUserResponse(user) {
+  const firstName = user.firstName || user.fullName?.split(/\s+/)[0] || '';
+  const lastName = user.lastName || user.fullName?.split(/\s+/).slice(1).join(' ') || '';
+
+  return {
+    _id: user._id.toString(),
+    firstName,
+    lastName,
+    fullName: user.fullName || [firstName, lastName].filter(Boolean).join(' '),
+    phoneNumber: user.phoneNumber,
+    dateOfBirth: user.dateOfBirth?.toISOString().slice(0, 10),
+    email: user.email,
+  };
+}
+
+async function register({ firstName, lastName, phoneNumber, dateOfBirth, email, password }) {
   try {
     const user = await User.create({
-      fullName: fullName.trim(),
+      firstName,
+      lastName,
+      fullName: [firstName, lastName].join(' '),
+      phoneNumber,
+      dateOfBirth: new Date(`${dateOfBirth}T00:00:00.000Z`),
       email: email.trim().toLowerCase(),
       passwordHash: await hashPassword(password),
     });
 
-    return {
-      user: {
-        _id: user._id.toString(),
-        fullName: user.fullName,
-        email: user.email,
-      },
-    };
+    return { user: toUserResponse(user) };
   } catch (error) {
     // The unique MongoDB index is the source of truth, including concurrent requests.
     if (error.code === 11000 && error.keyPattern?.email) {
@@ -52,11 +65,7 @@ async function login({ email, password }) {
   const tokens = await sessionService.createSession(user._id);
   return {
     ...tokens,
-    user: {
-      _id: user._id.toString(),
-      fullName: user.fullName,
-      email: user.email,
-    },
+    user: toUserResponse(user),
   };
 }
 

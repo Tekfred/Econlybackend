@@ -42,7 +42,11 @@ async function seedDevelopmentData() {
     { _id: USER_ID },
     {
       $set: {
+        firstName: 'Postman',
+        lastName: 'Local Tester',
         fullName: 'Postman Local Tester',
+        phoneNumber: '+233241234567',
+        dateOfBirth: new Date('1990-01-01T00:00:00.000Z'),
         email: TEST_EMAIL,
         passwordHash: await hashPassword(TEST_PASSWORD),
       },

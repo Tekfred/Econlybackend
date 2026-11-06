@@ -21,16 +21,58 @@ function validateLogin(req, res, next) {
 }
 
 function validateRegistration(req, res, next) {
-  const { fullName, email, password } = req.body || {};
+  const { firstName, lastName, phoneNumber, dateOfBirth, email, password } = req.body || {};
 
-  if (typeof fullName !== 'string' || !fullName.trim()) {
+  if (typeof firstName !== 'string' || !firstName.trim()) {
     return res.status(400).json({
-      error: { code: 'FULL_NAME_REQUIRED', message: 'Full name is required.' },
+      error: { code: 'FIRST_NAME_REQUIRED', message: 'First name is required.' },
     });
   }
-  if (fullName.trim().length > 120) {
+  if (firstName.trim().length > 60) {
     return res.status(400).json({
-      error: { code: 'FULL_NAME_TOO_LONG', message: 'Full name must be 120 characters or fewer.' },
+      error: { code: 'FIRST_NAME_TOO_LONG', message: 'First name must be 60 characters or fewer.' },
+    });
+  }
+  if (typeof lastName !== 'string' || !lastName.trim()) {
+    return res.status(400).json({
+      error: { code: 'LAST_NAME_REQUIRED', message: 'Last name is required.' },
+    });
+  }
+  if (lastName.trim().length > 60) {
+    return res.status(400).json({
+      error: { code: 'LAST_NAME_TOO_LONG', message: 'Last name must be 60 characters or fewer.' },
+    });
+  }
+  if (typeof phoneNumber !== 'string' || !phoneNumber.trim()) {
+    return res.status(400).json({
+      error: { code: 'PHONE_NUMBER_REQUIRED', message: 'Phone number is required.' },
+    });
+  }
+  const normalizedPhone = phoneNumber.trim().replace(/[\s().-]/g, '');
+  if (!/^\+?\d{7,15}$/.test(normalizedPhone)) {
+    return res.status(400).json({
+      error: { code: 'INVALID_PHONE_NUMBER', message: 'Enter a valid phone number with 7 to 15 digits.' },
+    });
+  }
+  if (typeof dateOfBirth !== 'string' || !dateOfBirth.trim()) {
+    return res.status(400).json({
+      error: { code: 'DATE_OF_BIRTH_REQUIRED', message: 'Date of birth is required in YYYY-MM-DD format.' },
+    });
+  }
+  const normalizedDateOfBirth = dateOfBirth.trim();
+  const parsedDateOfBirth = new Date(`${normalizedDateOfBirth}T00:00:00.000Z`);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(normalizedDateOfBirth)
+      || Number.isNaN(parsedDateOfBirth.getTime())
+      || parsedDateOfBirth.toISOString().slice(0, 10) !== normalizedDateOfBirth) {
+    return res.status(400).json({
+      error: { code: 'INVALID_DATE_OF_BIRTH', message: 'Enter a valid date of birth in YYYY-MM-DD format.' },
+    });
+  }
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  if (parsedDateOfBirth > today) {
+    return res.status(400).json({
+      error: { code: 'DATE_OF_BIRTH_IN_FUTURE', message: 'Date of birth cannot be in the future.' },
     });
   }
   if (typeof email !== 'string' || !email.trim()) {
@@ -54,7 +96,10 @@ function validateRegistration(req, res, next) {
     });
   }
 
-  req.body.fullName = fullName.trim();
+  req.body.firstName = firstName.trim();
+  req.body.lastName = lastName.trim();
+  req.body.phoneNumber = normalizedPhone;
+  req.body.dateOfBirth = normalizedDateOfBirth;
   req.body.email = email.trim().toLowerCase();
   return next();
 }
