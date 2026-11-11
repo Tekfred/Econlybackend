@@ -37,4 +37,13 @@ async function revokeSession(sessionId) {
   return Session.findByIdAndDelete(sessionId);
 }
 
-module.exports = { createSession, findByAccessToken, revokeSession };
+async function revokeUserSessions(userId) {
+  return Session.deleteMany({ userId });
+}
+
+module.exports = {
+  createSession,
+  findByAccessToken,
+  revokeSession,
+  revokeUserSessions,
+};

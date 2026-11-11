@@ -27,4 +27,58 @@ async function logout(req, res, next) {
   }
 }
 
-module.exports = { register, login, logout };
+async function requestEmailSignInCode(req, res, next) {
+  try {
+    const result = await authService.requestEmailSignInCode(req.body);
+    return res.status(200).json(result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function verifyEmailSignInCode(req, res, next) {
+  try {
+    const result = await authService.verifyEmailSignInCode(req.body);
+    return res.status(200).json(result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function requestPasswordReset(req, res, next) {
+  try {
+    const result = await authService.requestPasswordReset(req.body);
+    return res.status(200).json(result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function verifyPasswordResetOtp(req, res, next) {
+  try {
+    const result = await authService.verifyPasswordResetOtp(req.body);
+    return res.status(200).json(result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function resetPassword(req, res, next) {
+  try {
+    const result = await authService.resetPassword(req.body);
+    return res.status(200).json(result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+module.exports = {
+  register,
+  login,
+  logout,
+  requestEmailSignInCode,
+  verifyEmailSignInCode,
+  requestPasswordReset,
+  verifyPasswordResetOtp,
+  resetPassword,
+};

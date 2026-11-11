@@ -76,6 +76,11 @@ All routes use JSON unless otherwise specified.
 | `POST` | `/api/v1/auth/register` | None | Create an account |
 | `POST` | `/api/v1/auth/login` | None | Verify credentials and create a session |
 | `POST` | `/api/v1/auth/logout` | Bearer access token | Revoke the current session |
+| `POST` | `/api/v1/auth/email-code/request` | None | Request a passwordless sign-in code |
+| `POST` | `/api/v1/auth/email-code/verify` | None | Verify a sign-in code and create a session |
+| `POST` | `/api/v1/auth/password-reset/request` | None | Send a one-time password reset code |
+| `POST` | `/api/v1/auth/password-reset/verify` | None | Verify the code and issue a short-lived reset token |
+| `POST` | `/api/v1/auth/password-reset/confirm` | None | Set a new password using the reset token |
 | `GET` | `/api/v1/products/:id` | None | Get one active product by MongoDB ObjectId |
 | `GET` | `/api/v1/cart` | Bearer access token | Get the signed-in user’s cart, or an empty cart |
 
@@ -115,6 +120,39 @@ Success returns `201 Created`:
 ```
 
 The response does not include the password or password hash. An email already in use returns `409 EMAIL_ALREADY_REGISTERED`. Validation failures return `400` with a stable error code in `error.code`.
+
+### Reset a password
+
+Request a four-digit code with `POST /api/v1/auth/password-reset/request`:
+
+```json
+{ "email": "ama@example.test" }
+```
+
+The response is generic whether or not the account exists. Verify the emailed
+code with `POST /api/v1/auth/password-reset/verify`:
+
+```json
+{ "email": "ama@example.test", "code": "1234" }
+```
+
+A successful verification returns a short-lived `resetToken`. Submit that
+value and the new password to `POST /api/v1/auth/password-reset/confirm`:
+
+```json
+{ "resetToken": "<token-from-verification>", "newPassword": "NewStrongPassword123!" }
+```
+
+Reset codes and tokens expire after 10 minutes by default. Codes are limited to
+five guesses, and resend requests have a 60-second cooldown. Reset codes are
+stored as bcrypt hashes; reset tokens are stored as SHA-256 hashes. A successful
+password reset revokes the account's existing sessions.
+
+Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, and
+`EMAIL_FROM` in the backend `.env` to deliver emails. In local development,
+when SMTP is not configured, the code is printed to the backend terminal for
+manual testing. The OTP is never included in the API response. Do not rely on
+the development fallback in production.
 
 ### Log in and use authenticated routes
 
@@ -173,8 +211,8 @@ If Postman times out, check that the API is listening on port `3000`, the reques
 
 ## Current scope and limitations
 
-- Registration, login, logout, product read, and cart read are implemented.
-- Cart writes, product management, orders, checkout, password recovery, email/OTP verification, refresh-token rotation, and social sign-in are not implemented.
+- Registration, password login, email-code sign-in, password reset, logout, product read, and cart read are implemented.
+- Cart writes, product management, orders, checkout, account email verification, refresh-token rotation, and social sign-in are not implemented.
 - Redis is an optional product cache. MongoDB remains the source of truth. If Redis is disabled or unavailable, product reads continue from MongoDB.
 - WebSockets are not implemented. The current API uses REST.
 - The Flutter client is a separate project; configure its API base URL and remote auth datasource before connecting its UI to this API.

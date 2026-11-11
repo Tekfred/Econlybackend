@@ -104,4 +104,91 @@ function validateRegistration(req, res, next) {
   return next();
 }
 
-module.exports = { validateLogin, validateRegistration };
+function validateRecoveryEmail(req, res) {
+  const { email } = req.body || {};
+  if (typeof email !== 'string' || !email.trim()) {
+    res.status(400).json({
+      error: { code: 'EMAIL_REQUIRED', message: 'Email is required.' },
+    });
+    return false;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    res.status(400).json({
+      error: { code: 'INVALID_EMAIL', message: 'Enter a valid email address.' },
+    });
+    return false;
+  }
+  req.body.email = email.trim().toLowerCase();
+  return true;
+}
+
+function validatePasswordResetRequest(req, res, next) {
+  if (!validateRecoveryEmail(req, res)) return;
+  return next();
+}
+
+function validateEmailSignInRequest(req, res, next) {
+  if (!validateRecoveryEmail(req, res)) return;
+  return next();
+}
+
+function validateEmailSignInOtp(req, res, next) {
+  if (!validateRecoveryEmail(req, res)) return;
+  const { code } = req.body || {};
+  if (typeof code !== 'string' || !/^\d{4}$/.test(code)) {
+    return res.status(400).json({
+      error: { code: 'INVALID_SIGN_IN_CODE', message: 'Enter the four-digit sign-in code.' },
+    });
+  }
+  return next();
+}
+
+function validatePasswordResetOtp(req, res, next) {
+  if (!validateRecoveryEmail(req, res)) return;
+  const { code } = req.body || {};
+  if (typeof code !== 'string' || !/^\d{4}$/.test(code)) {
+    return res.status(400).json({
+      error: {
+        code: 'INVALID_RESET_CODE',
+        message: 'Enter the four-digit reset code.',
+      },
+    });
+  }
+  return next();
+}
+
+function validatePasswordReset(req, res, next) {
+  const { resetToken, newPassword } = req.body || {};
+  if (typeof resetToken !== 'string' || resetToken.length < 32) {
+    return res.status(400).json({
+      error: { code: 'RESET_TOKEN_REQUIRED', message: 'A valid reset token is required.' },
+    });
+  }
+  if (typeof newPassword !== 'string' || newPassword.length < 8) {
+    return res.status(400).json({
+      error: {
+        code: 'PASSWORD_TOO_SHORT',
+        message: 'Password must be at least 8 characters.',
+      },
+    });
+  }
+  if (Buffer.byteLength(newPassword, 'utf8') > 72) {
+    return res.status(400).json({
+      error: {
+        code: 'PASSWORD_TOO_LONG',
+        message: 'Password must be 72 bytes or fewer.',
+      },
+    });
+  }
+  return next();
+}
+
+module.exports = {
+  validateLogin,
+  validateRegistration,
+  validatePasswordResetRequest,
+  validateEmailSignInRequest,
+  validateEmailSignInOtp,
+  validatePasswordResetOtp,
+  validatePasswordReset,
+};
